@@ -3,125 +3,125 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cyber Terminal</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cyber Runner</title>
 <style>
 *{box-sizing:border-box}
-body{
-  margin:0;background:#020604;color:#00ff88;
-  font-family:monospace;min-height:100vh;
-  padding:18px;overflow-x:hidden
-}
-canvas{position:fixed;inset:0;width:100%;height:100%;z-index:-1}
-.terminal{
-  max-width:750px;margin:35px auto;
-  border:1px solid #00ff8870;
-  background:rgba(0,10,5,.94);
-  box-shadow:0 0 25px #00ff8820;
-  border-radius:10px;overflow:hidden
-}
-.top{
-  padding:14px;background:#062016;
-  border-bottom:1px solid #00ff8840;
-  display:flex;justify-content:space-between
-}
-.dot{color:#ff4b4b}
-.content{padding:20px;line-height:1.8}
-h1{font-size:23px;text-shadow:0 0 12px #00ff88}
-.muted{color:#65a889}
-#output{white-space:pre-wrap;overflow-wrap:anywhere}
-.inputline{display:flex;gap:8px;margin-top:15px}
-input{
-  background:transparent;color:#00ff88;
-  border:0;border-bottom:1px solid #00ff88;
-  outline:none;flex:1;min-width:0;font:inherit
-}
-button{
-  background:#00ff88;color:#001b0c;
-  border:0;padding:9px 13px;font-weight:bold
-}
-footer{text-align:center;color:#458467;font-size:12px;padding:15px}
+body{margin:0;background:#050914;color:#00ffc3;font-family:monospace;text-align:center}
+h1{letter-spacing:3px;text-shadow:0 0 15px #00ffc3}
+p{color:#9cb8c9}
+.game{max-width:480px;margin:18px auto;padding:12px}
+canvas{width:100%;background:#080f20;border:2px solid #00ffc3;border-radius:12px;display:block;touch-action:manipulation}
+button{background:#00ffc3;color:#04101b;border:0;border-radius:8px;padding:14px;font-weight:bold;font-size:16px}
+.controls{display:flex;gap:12px;margin-top:12px}
+.controls button{flex:1}
+#start{width:100%;margin-top:12px}
 </style>
 </head>
 <body>
-<canvas id="matrix"></canvas>
-<div class="terminal">
-  <div class="top">
-    <span><span class="dot">●</span> CYBER TERMINAL</span>
-    <span>ONLINE</span>
-  </div>
-  <div class="content">
-    <h1>ACCESS TERMINAL_</h1>
-    <p class="muted">Welcome, Operator. Simulation mode enabled.</p>
-    <div id="output"></div>
-    <div class="inputline">
-      <span>&gt;</span>
-      <input id="cmd" placeholder="Type help..." autocomplete="off">
-      <button onclick="run()">RUN</button>
-    </div>
-    <p class="muted">Try: help, scan, status, clear, date</p>
-  </div>
-  <footer>CYBER SYSTEMS // EDUCATIONAL SIMULATION</footer>
+<div class="game">
+<h1>CYBER RUNNER</h1>
+<p>Move left/right. Dodge the red blocks!</p>
+<p>SCORE: <b id="score">0</b> | BEST: <b id="best">0</b></p>
+<canvas id="game" width="360" height="500"></canvas>
+<div class="controls">
+<button id="left">◀ LEFT</button>
+<button id="right">RIGHT ▶</button>
+</div>
+<button id="start">START GAME</button>
+<p>Collect survival time. Avoid the red obstacles!</p>
 </div>
 <script>
-const out=document.getElementById("output");
-const intro=[
-"> Initializing terminal...",
-"> Loading visual interface...",
-"> Security simulation: ACTIVE",
-"> Type 'help' to view commands."
-];
-let n=0;
-function boot(){
- if(n<intro.length){
-  out.textContent+=intro[n++]+"\n";
-  setTimeout(boot,500);
- }
-}
-boot();
-
-function run(){
- const input=document.getElementById("cmd");
- const c=input.value.trim().toLowerCase();
- if(!c)return;
- out.textContent+="\n> "+c+"\n";
- const replies={
- help:"Commands: help, scan, status, clear, date",
- scan:"Starting simulated scan...\n[#####-----] 50%\n[##########] 100%\nScan complete. Demo only; no real system scanned.",
- status:"Terminal: ONLINE\nMode: VISUAL SIMULATION\nConnection: Not tested",
- date:"Local time: "+new Date().toLocaleString(),
- };
- if(c==="clear")out.textContent="";
- else out.textContent+=(replies[c]||"Command not found. Type 'help'.")+"\n";
- input.value="";
-}
-document.getElementById("cmd").addEventListener("keydown",e=>{
- if(e.key==="Enter")run();
-});
-
-const canvas=document.getElementById("matrix");
+const canvas=document.getElementById("game");
 const ctx=canvas.getContext("2d");
-let drops=[];
-function resize(){
- canvas.width=innerWidth;
- canvas.height=innerHeight;
- drops=Array(Math.ceil(canvas.width/16)).fill(1);
+const scoreEl=document.getElementById("score");
+const bestEl=document.getElementById("best");
+let player={x:160,y:420,w:38,h:38};
+let blocks=[],score=0,playing=false,ended=false,last=0,spawn=0;
+let best=0;
+try{best=Number(localStorage.getItem("cyberBest"))||0}catch(e){}
+bestEl.textContent=best;
+
+function reset(){
+ player.x=160;blocks=[];score=0;spawn=0;last=0;
+ scoreEl.textContent=0;playing=true;ended=false;
+ document.getElementById("start").textContent="RESTART GAME";
+ requestAnimationFrame(loop);
 }
-resize();
-window.addEventListener("resize",resize);
+function move(dir){
+ if(!playing)return;
+ player.x=Math.max(8,Math.min(314,player.x+dir*32));
+}
+document.getElementById("left").onclick=()=>move(-1);
+document.getElementById("right").onclick=()=>move(1);
+document.getElementById("start").onclick=reset;
+canvas.addEventListener("pointerdown",e=>{
+ if(!playing)return;
+ const r=canvas.getBoundingClientRect();
+ move(e.clientX<r.left+r.width/2?-1:1);
+});
+document.addEventListener("keydown",e=>{
+ if(e.key==="ArrowLeft"||e.key==="a")move(-1);
+ if(e.key==="ArrowRight"||e.key==="d")move(1);
+ if(e.key===" "&&!playing)reset();
+});
+function rectHit(a,b){
+ return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;
+}
 function draw(){
- ctx.fillStyle="rgba(0,0,0,0.08)";
- ctx.fillRect(0,0,canvas.width,canvas.height);
- ctx.fillStyle="#00ff88";
- ctx.font="14px monospace";
- drops.forEach((y,i)=>{
-  const char=String.fromCharCode(0x30A0+Math.random()*96);
-  ctx.fillText(char,i*16,y*16);
-  if(y*16>canvas.height&&Math.random()>.975)drops[i]=0;
-  drops[i]++;
+ ctx.clearRect(0,0,360,500);
+ ctx.strokeStyle="#18314b";ctx.lineWidth=1;
+ for(let y=0;y<500;y+=40){
+  ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(360,y);ctx.stroke();
+ }
+ for(let x=0;x<360;x+=40){
+  ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,500);ctx.stroke();
+ }
+ ctx.shadowBlur=15;ctx.shadowColor="#00ffc3";
+ ctx.fillStyle="#00ffc3";
+ ctx.fillRect(player.x,player.y,player.w,player.h);
+ ctx.fillStyle="#05222a";
+ ctx.fillRect(player.x+7,player.y+8,24,8);
+ ctx.shadowBlur=0;
+ blocks.forEach(b=>{
+  ctx.shadowBlur=12;ctx.shadowColor="#ff3155";
+  ctx.fillStyle="#ff3155";ctx.fillRect(b.x,b.y,b.w,b.h);
  });
+ ctx.shadowBlur=0;
 }
-setInterval(draw,50);
+function loop(t){
+ if(!playing)return;
+ const dt=Math.min((t-(last||t))/16.67,2);last=t;
+ spawn+=dt;
+ if(spawn>34){
+  spawn=0;
+  blocks.push({x:Math.random()*310,y:-28,w:30+Math.random()*16,h:25});
+ }
+ blocks.forEach(b=>b.y+=(3+score/250)*dt);
+ blocks=blocks.filter(b=>b.y<520);
+ for(const b of blocks){
+  if(rectHit(player,b)){playing=false;ended=true}
+ }
+ if(!playing){
+  draw();
+  ctx.fillStyle="rgba(0,0,0,.78)";
+  ctx.fillRect(20,190,320,100);
+  ctx.fillStyle="#ff3155";ctx.font="bold 25px monospace";
+  ctx.textAlign="center";ctx.fillText("GAME OVER",180,230);
+  ctx.fillStyle="#fff";ctx.font="16px monospace";
+  ctx.fillText("Tap RESTART to try again",180,260);
+  document.getElementById("start").textContent="RESTART GAME";
+  return;
+ }
+ score+=dt;
+ scoreEl.textContent=Math.floor(score);
+ if(Math.floor(score)>best){
+  best=Math.floor(score);bestEl.textContent=best;
+  try{localStorage.setItem("cyberBest",best)}catch(e){}
+ }
+ draw();requestAnimationFrame(loop);
+}
+draw();
 </script>
 </body>
 </html>
