@@ -3,104 +3,119 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Solar System 3D</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Open City Driver</title>
 <style>
 *{box-sizing:border-box}
-body{margin:0;background:#030611;color:white;font-family:Arial,sans-serif;overflow-x:hidden}
-header{text-align:center;padding:20px 8px 8px}
-h1{margin:0;color:#8deaff;letter-spacing:3px;font-size:clamp(21px,5vw,34px)}
-header p{color:#98a9c7;font-size:13px}
-.scene{height:min(68vh,570px);min-height:390px;position:relative;overflow:hidden;touch-action:pan-y}
-.space{position:absolute;inset:0;display:grid;place-items:center;transform:scale(var(--zoom,1));transition:transform .2s}
-.sun{width:48px;height:48px;border-radius:50%;background:radial-gradient(circle,#fff6b0,#ffb000 50%,#ff4c00);box-shadow:0 0 25px #ffb000,0 0 65px #ff730080;position:absolute;z-index:3}
-.orbit{position:absolute;border:1px solid #8fa8d52c;border-radius:50%;aspect-ratio:1}
-.planet{position:absolute;left:50%;top:0;width:100%;height:100%;border-radius:50%;animation:orbit linear infinite;cursor:pointer}
-.ball{position:absolute;left:50%;top:0;width:var(--size);height:var(--size);border-radius:50%;background:var(--color);box-shadow:inset -5px -3px 8px #0009,0 0 8px var(--color);transform:translate(-50%,-50%)}
-.planet-name{position:absolute;left:50%;top:0;transform:translate(-50%,-24px);font-size:10px;color:#dbeaff;white-space:nowrap}
-.saturn .ball:after{content:"";position:absolute;width:180%;height:55%;border:3px solid #d6b68d;border-radius:50%;left:-40%;top:22%;transform:rotate(-20deg)}
-.controls{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;padding:8px}
-button{border:1px solid #37628c;background:#0b1930;color:#d8f6ff;padding:11px 14px;border-radius:9px;font-size:13px}
-button:active{background:#173b5a}
-.info{margin:10px auto 25px;max-width:520px;padding:16px;border:1px solid #253957;border-radius:14px;background:#091222;width:calc(100% - 28px)}
-.info h2{margin:0 0 8px;color:#8deaff}
-.info p{color:#b6c6de;line-height:1.5;font-size:14px}
-.small{font-size:11px!important;color:#7185a6!important}
-@keyframes orbit{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+body{margin:0;background:#101820;color:white;font-family:Arial,sans-serif;overflow:hidden;touch-action:none}
+header{height:48px;background:#101820;display:flex;align-items:center;justify-content:space-around;color:#52ffc0;font-weight:bold}
+canvas{display:block;width:100vw;height:calc(100dvh - 48px);background:#497b47}
+#controls{position:fixed;bottom:18px;left:0;right:0;display:flex;justify-content:space-between;align-items:end;padding:0 18px;pointer-events:none}
+.pad{display:grid;grid-template-columns:48px 48px 48px;grid-template-rows:48px 48px 48px;gap:4px;pointer-events:auto}
+button{background:#172735df;border:1px solid #80e8c2;color:white;border-radius:12px;font-size:20px;touch-action:none}
+.pad button:nth-child(1){grid-column:2;grid-row:1}
+.pad button:nth-child(2){grid-column:1;grid-row:2}
+.pad button:nth-child(3){grid-column:2;grid-row:2}
+.pad button:nth-child(4){grid-column:3;grid-row:2}
+.pad button:nth-child(5){grid-column:2;grid-row:3}
+#gas{width:74px;height:74px;border-radius:50%;background:#087e59df;font-size:14px;font-weight:bold;pointer-events:auto}
+#message{position:fixed;top:60px;left:50%;transform:translateX(-50%);color:#fff;background:#10251bd9;padding:7px 12px;border-radius:9px;font-size:12px;white-space:nowrap}
 </style>
 </head>
 <body>
-<header>
-<h1>SOLAR SYSTEM</h1>
-<p>EXPLORE OUR COSMIC NEIGHBOURHOOD</p>
-</header>
-<div class="scene">
-<div class="space" id="space">
-<div class="sun" title="Sun"></div>
-</div>
-</div>
-<div class="controls">
-<button id="pause">⏸ Pause</button>
-<button id="slower">− Speed</button>
-<button id="faster">+ Speed</button>
-<button id="zoomOut">− Zoom</button>
-<button id="zoomIn">+ Zoom</button>
-</div>
-<div class="info">
-<h2 id="name">Welcome, Explorer!</h2>
-<p id="desc">Tap any planet to learn about it. Watch the planets orbit around the Sun.</p>
-<p class="small">Orbit sizes and speeds are illustrative, not to scale.</p>
+<header><span>🏙️ OPEN CITY</span><span>💰 $<b id="money">0</b></span><span>🚗 <b id="speed">0</b> km/h</span></header>
+<canvas id="c"></canvas>
+<div id="message">Explore the city and collect coins!</div>
+<div id="controls">
+ <div class="pad">
+  <button data-dir="up">▲</button>
+  <button data-dir="left">◀</button>
+  <button data-dir="down">▼</button>
+  <button data-dir="right">▶</button>
+ </div>
+ <button id="gas">DRIVE<br>HOLD</button>
 </div>
 <script>
-const planets=[
-{name:"Mercury",size:5,color:"#aaa9a5",orbit:66,time:7,desc:"The smallest planet and the closest to the Sun. A rocky world with extreme temperatures."},
-{name:"Venus",size:9,color:"#e4b16c",orbit:91,time:10,desc:"Our hottest planet, wrapped in a thick atmosphere rich in carbon dioxide."},
-{name:"Earth",size:10,color:"#319cff",orbit:118,time:14,desc:"Our home planet, with liquid water on the surface and life as we know it."},
-{name:"Mars",size:8,color:"#ef6846",orbit:145,time:18,desc:"The Red Planet. Scientists study its ancient landscapes for clues about past water."},
-{name:"Jupiter",size:20,color:"#d5ae87",orbit:178,time:26,desc:"The largest planet in our solar system. Its atmosphere contains enormous storms."},
-{name:"Saturn",size:17,color:"#e4d0a0",orbit:215,time:34,desc:"A gas giant famous for its spectacular rings made mostly of ice and rocky debris."},
-{name:"Uranus",size:13,color:"#83e5e8",orbit:252,time:43,desc:"An ice giant that rotates on its side compared with most planets."},
-{name:"Neptune",size:13,color:"#477bff",orbit:290,time:53,desc:"A distant ice giant with extremely powerful winds."}
-];
-const space=document.getElementById("space");
-let speed=1,paused=false,zoom=1;
-planets.forEach(p=>{
- const orbit=document.createElement("div");
- orbit.className="orbit";
- orbit.style.width=p.orbit*2+"px";
- orbit.style.height=p.orbit*2+"px";
- const planet=document.createElement("div");
- planet.className="planet"+(p.name==="Saturn"?" saturn":"");
- planet.style.animationDuration=p.time+"s";
- planet.style.animationPlayState="running";
- const ball=document.createElement("div");
- ball.className="ball";
- ball.style.setProperty("--size",p.size+"px");
- ball.style.setProperty("--color",p.color);
- const label=document.createElement("span");
- label.className="planet-name";
- label.textContent=p.name;
- ball.appendChild(label);
- planet.appendChild(ball);
- orbit.appendChild(planet);
- space.appendChild(orbit);
- planet.addEventListener("click",()=>{
-  document.getElementById("name").textContent=p.name;
-  document.getElementById("desc").textContent=p.desc;
- });
+const c=document.getElementById('c'),ctx=c.getContext('2d');
+let W,H,camX=0,camY=0;
+function resize(){c.width=innerWidth*devicePixelRatio;c.height=(innerHeight-48)*devicePixelRatio;c.style.width=innerWidth+'px';c.style.height=(innerHeight-48)+'px';ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);W=innerWidth;H=innerHeight-48}
+addEventListener('resize',resize);resize();
+const keys={up:false,down:false,left:false,right:false,gas:false};
+document.querySelectorAll('[data-dir]').forEach(b=>{
+ const k=b.dataset.dir;
+ b.addEventListener('pointerdown',e=>{e.preventDefault();keys[k]=true;b.setPointerCapture(e.pointerId)});
+ ['pointerup','pointercancel','lostpointercapture'].forEach(ev=>b.addEventListener(ev,()=>keys[k]=false));
 });
-function updateSpeed(){
- document.querySelectorAll(".planet").forEach((el,i)=>{
-  el.style.animationDuration=(planets[i].time/speed)+"s";
-  el.style.animationPlayState=paused?"paused":"running";
- });
- document.getElementById("pause").textContent=paused?"▶ Resume":"⏸ Pause";
+const gas=document.getElementById('gas');
+gas.addEventListener('pointerdown',e=>{e.preventDefault();keys.gas=true;gas.setPointerCapture(e.pointerId)});
+['pointerup','pointercancel','lostpointercapture'].forEach(ev=>gas.addEventListener(ev,()=>keys.gas=false));
+addEventListener('keydown',e=>{const map={ArrowUp:'up',w:'up',ArrowDown:'down',s:'down',ArrowLeft:'left',a:'left',ArrowRight:'right',d:'right', ' ':'gas'};if(map[e.key]){keys[map[e.key]]=true;e.preventDefault()}});
+addEventListener('keyup',e=>{const map={ArrowUp:'up',w:'up',ArrowDown:'down',s:'down',ArrowLeft:'left',a:'left',ArrowRight:'right',d:'right',' ':'gas'};if(map[e.key])keys[map[e.key]]=false});
+const car={x:0,y:0,a:0,v:0};
+let money=0,coins=[],traffic=[];
+const block=220,road=100;
+function roadAt(x,y){return Math.abs(((x%block)+block)%block-block/2)<road/2||Math.abs(((y%block)+block)%block-block/2)<road/2}
+function setup(){
+ for(let i=0;i<45;i++){coins.push({x:(Math.random()-.5)*4500,y:(Math.random()-.5)*4500,got:false})}
+ for(let i=0;i<18;i++)traffic.push({x:(Math.random()-.5)*3000,y:(Math.random()-.5)*3000,a:Math.random()*Math.PI*2,v:.5+Math.random()*.8,color:['#e6bd55','#db5858','#5ca8e8'][i%3]});
 }
-document.getElementById("pause").onclick=()=>{paused=!paused;updateSpeed()};
-document.getElementById("faster").onclick=()=>{speed=Math.min(4,speed*1.25);updateSpeed()};
-document.getElementById("slower").onclick=()=>{speed=Math.max(.25,speed/1.25);updateSpeed()};
-document.getElementById("zoomIn").onclick=()=>{zoom=Math.min(1.4,zoom+.1);space.style.setProperty("--zoom",zoom)};
-document.getElementById("zoomOut").onclick=()=>{zoom=Math.max(.55,zoom-.1);space.style.setProperty("--zoom",zoom)};
+setup();
+function roundRect(x,y,w,h,r,col){ctx.fillStyle=col;ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.fill()}
+function drawCar(x,y,a,col,scale=1){
+ ctx.save();ctx.translate(x,y);ctx.rotate(a);
+ roundRect(-12*scale,-21*scale,24*scale,42*scale,5*scale,col);
+ roundRect(-8*scale,-13*scale,16*scale,12*scale,3*scale,'#a8d9e8');
+ roundRect(-8*scale,5*scale,16*scale,8*scale,2*scale,'#263c48');
+ ctx.fillStyle='#fff4b0';ctx.fillRect(-10*scale,-20*scale,5*scale,3*scale);ctx.fillRect(5*scale,-20*scale,5*scale,3*scale);
+ ctx.restore();
+}
+function drawWorld(){
+ ctx.fillStyle='#54844b';ctx.fillRect(0,0,W,H);
+ const left=camX-W/2-250,right=camX+W/2+250,top=camY-H/2-250,bottom=camY+H/2+250;
+ for(let x=Math.floor(left/block)*block;x<right;x+=block){
+  for(let y=Math.floor(top/block)*block;y<bottom;y+=block){
+   const sx=x-camX+W/2,sy=y-camY+H/2;
+   ctx.fillStyle='#9ba3a5';ctx.fillRect(sx,sy,road,block);
+   ctx.fillStyle='#4a5058';ctx.fillRect(sx+5,sy,road-10,block);
+   ctx.fillStyle='#9ba3a5';ctx.fillRect(sx,sy,block,road);
+   ctx.fillStyle='#4a5058';ctx.fillRect(sx,sy+5,block,road-10);
+   ctx.strokeStyle='#d4d2a0';ctx.setLineDash([13,13]);ctx.lineWidth=2;
+   ctx.beginPath();ctx.moveTo(sx+block/2,sy);ctx.lineTo(sx+block/2,sy+block);ctx.stroke();
+   ctx.beginPath();ctx.moveTo(sx,sy+block/2);ctx.lineTo(sx+block,sy+block/2);ctx.stroke();ctx.setLineDash([]);
+   const bx=sx+road+12,by=sy+road+12,bw=block-road-24,bh=block-road-24;
+   ctx.fillStyle='#6c665e';ctx.fillRect(bx+4,by+5,bw,bh);
+   ctx.fillStyle=['#b6a38d','#a8b3bb','#d0b28b','#8e9f91'][(Math.abs(x/block*3+y/block*7)|0)%4];ctx.fillRect(bx,by,bw,bh);
+   for(let wx=bx+12;wx<bx+bw-8;wx+=25)for(let wy=by+12;wy<by+bh-8;wy+=25){ctx.fillStyle='#536d78';ctx.fillRect(wx,wy,10,10)}
+  }
+ }
+ coins.forEach(o=>{
+  if(o.got)return;
+  const x=o.x-camX+W/2,y=o.y-camY+H/2;
+  if(x<-20||x>W+20||y<-20||y>H+20)return;
+  ctx.beginPath();ctx.arc(x,y,8,0,Math.PI*2);ctx.fillStyle='#ffdc48';ctx.fill();ctx.strokeStyle='#fff1a4';ctx.stroke();
+ });
+ traffic.forEach(t=>drawCar(t.x-camX+W/2,t.y-camY+H/2,t.a,t.color,.8));
+ drawCar(W/2,H/2,car.a,'#37f5b2',1);
+}
+function update(){
+ const accel=keys.gas||keys.up?.12:0;
+ car.v+=accel;
+ if(keys.down)car.v-=.09;
+ car.v*=.985;car.v=Math.max(-2.3,Math.min(4.5,car.v));
+ if(Math.abs(car.v)>.15){
+  if(keys.left)car.a-=.045*Math.sign(car.v);
+  if(keys.right)car.a+=.045*Math.sign(car.v);
+ }
+ const nx=car.x+Math.sin(car.a)*car.v*2;
+ const ny=car.y-Math.cos(car.a)*car.v*2;
+ if(roadAt(nx,ny)){car.x=nx;car.y=ny}else car.v*=.72;
+ coins.forEach(o=>{if(!o.got&&Math.hypot(o.x-car.x,o.y-car.y)<24){o.got=true;money+=10;document.getElementById('money').textContent=money}});
+ traffic.forEach(t=>{t.x+=Math.sin(t.a)*t.v;t.y-=Math.cos(t.a)*t.v;if(Math.abs(t.x-car.x)<22&&Math.abs(t.y-car.y)<25)car.v*=.9});
+ camX+=(car.x-camX)*.1;camY+=(car.y-camY)*.1;
+ document.getElementById('speed').textContent=Math.round(Math.abs(car.v)*24);
+}
+function loop(){update();drawWorld();requestAnimationFrame(loop)}
+loop();
 </script>
 </body>
 </html>
