@@ -1,0 +1,127 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cyber Terminal</title>
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;background:#020604;color:#00ff88;
+  font-family:monospace;min-height:100vh;
+  padding:18px;overflow-x:hidden
+}
+canvas{position:fixed;inset:0;width:100%;height:100%;z-index:-1}
+.terminal{
+  max-width:750px;margin:35px auto;
+  border:1px solid #00ff8870;
+  background:rgba(0,10,5,.94);
+  box-shadow:0 0 25px #00ff8820;
+  border-radius:10px;overflow:hidden
+}
+.top{
+  padding:14px;background:#062016;
+  border-bottom:1px solid #00ff8840;
+  display:flex;justify-content:space-between
+}
+.dot{color:#ff4b4b}
+.content{padding:20px;line-height:1.8}
+h1{font-size:23px;text-shadow:0 0 12px #00ff88}
+.muted{color:#65a889}
+#output{white-space:pre-wrap;overflow-wrap:anywhere}
+.inputline{display:flex;gap:8px;margin-top:15px}
+input{
+  background:transparent;color:#00ff88;
+  border:0;border-bottom:1px solid #00ff88;
+  outline:none;flex:1;min-width:0;font:inherit
+}
+button{
+  background:#00ff88;color:#001b0c;
+  border:0;padding:9px 13px;font-weight:bold
+}
+footer{text-align:center;color:#458467;font-size:12px;padding:15px}
+</style>
+</head>
+<body>
+<canvas id="matrix"></canvas>
+<div class="terminal">
+  <div class="top">
+    <span><span class="dot">●</span> CYBER TERMINAL</span>
+    <span>ONLINE</span>
+  </div>
+  <div class="content">
+    <h1>ACCESS TERMINAL_</h1>
+    <p class="muted">Welcome, Operator. Simulation mode enabled.</p>
+    <div id="output"></div>
+    <div class="inputline">
+      <span>&gt;</span>
+      <input id="cmd" placeholder="Type help..." autocomplete="off">
+      <button onclick="run()">RUN</button>
+    </div>
+    <p class="muted">Try: help, scan, status, clear, date</p>
+  </div>
+  <footer>CYBER SYSTEMS // EDUCATIONAL SIMULATION</footer>
+</div>
+<script>
+const out=document.getElementById("output");
+const intro=[
+"> Initializing terminal...",
+"> Loading visual interface...",
+"> Security simulation: ACTIVE",
+"> Type 'help' to view commands."
+];
+let n=0;
+function boot(){
+ if(n<intro.length){
+  out.textContent+=intro[n++]+"\n";
+  setTimeout(boot,500);
+ }
+}
+boot();
+
+function run(){
+ const input=document.getElementById("cmd");
+ const c=input.value.trim().toLowerCase();
+ if(!c)return;
+ out.textContent+="\n> "+c+"\n";
+ const replies={
+ help:"Commands: help, scan, status, clear, date",
+ scan:"Starting simulated scan...\n[#####-----] 50%\n[##########] 100%\nScan complete. Demo only; no real system scanned.",
+ status:"Terminal: ONLINE\nMode: VISUAL SIMULATION\nConnection: Not tested",
+ date:"Local time: "+new Date().toLocaleString(),
+ };
+ if(c==="clear")out.textContent="";
+ else out.textContent+=(replies[c]||"Command not found. Type 'help'.")+"\n";
+ input.value="";
+}
+document.getElementById("cmd").addEventListener("keydown",e=>{
+ if(e.key==="Enter")run();
+});
+
+const canvas=document.getElementById("matrix");
+const ctx=canvas.getContext("2d");
+let drops=[];
+function resize(){
+ canvas.width=innerWidth;
+ canvas.height=innerHeight;
+ drops=Array(Math.ceil(canvas.width/16)).fill(1);
+}
+resize();
+window.addEventListener("resize",resize);
+function draw(){
+ ctx.fillStyle="rgba(0,0,0,0.08)";
+ ctx.fillRect(0,0,canvas.width,canvas.height);
+ ctx.fillStyle="#00ff88";
+ ctx.font="14px monospace";
+ drops.forEach((y,i)=>{
+  const char=String.fromCharCode(0x30A0+Math.random()*96);
+  ctx.fillText(char,i*16,y*16);
+  if(y*16>canvas.height&&Math.random()>.975)drops[i]=0;
+  drops[i]++;
+ });
+}
+setInterval(draw,50);
+</script>
+</body>
+</html>
